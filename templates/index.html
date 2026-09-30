@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RupeeTrack - Multi-Person Expense Tracker</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SweetAlert2 CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Google Fonts Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/custom.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#312e81',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col">
+
+    <!-- Top Navigation Bar -->
+    <header class="bg-white/80 backdrop-blur-md sticky top-0 z-40 border-b border-slate-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-4">
+            <!-- Brand Logo -->
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
+                    <i class="fa-solid fa-indian-rupee-sign text-lg font-bold"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-extrabold bg-gradient-to-r from-indigo-900 to-indigo-600 bg-clip-text text-transparent leading-none">
+                        RupeeTrack
+                    </h1>
+                    <span class="text-xs text-slate-500 font-medium">Shared & Individual Expense Manager</span>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex items-center flex-wrap gap-2.5">
+                <button onclick="openBalanceModal()" class="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-semibold rounded-lg bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 transition-all shadow-sm">
+                    <i class="fa-solid fa-wallet text-amber-600"></i>
+                    <span>Change Initial Balance</span>
+                </button>
+                <button onclick="switchTab('persons-tab')" class="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-semibold rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all border border-slate-200 shadow-sm">
+                    <i class="fa-solid fa-users text-slate-600"></i>
+                    <span>Manage Persons</span>
+                </button>
+                <a href="/api/export/csv" class="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-semibold rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all border border-slate-200 shadow-sm" title="Download CSV summary">
+                    <i class="fa-solid fa-file-export text-slate-600"></i>
+                    <span>Export</span>
+                </a>
+                <button onclick="openAddExpenseModal()" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95 transition-all shadow-md shadow-indigo-600/25">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>Add Expense</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-1">
+
+        <!-- Top Metrics Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <!-- Initial Balance Card -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+                <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-indigo-50 rounded-full group-hover:scale-110 transition-transform"></div>
+                <div class="flex items-center justify-between text-slate-500 mb-2 relative z-10">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Initial Balance</span>
+                    <button onclick="openBalanceModal()" class="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors" title="Edit Initial Balance">
+                        <i class="fa-solid fa-pen-to-square text-sm"></i>
+                    </button>
+                </div>
+                <div class="text-2xl font-extrabold text-slate-900 mb-1 relative z-10" id="card-initial-balance">
+                    ₹0.00
+                </div>
+                <div class="flex items-center text-xs text-indigo-600 font-medium relative z-10">
+                    <i class="fa-solid fa-circle-check mr-1.5 text-[10px]"></i> Total Allocated Pool
+                </div>
+            </div>
+
+            <!-- Total Expenses Card -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+                <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-rose-50 rounded-full group-hover:scale-110 transition-transform"></div>
+                <div class="flex items-center justify-between text-slate-500 mb-2 relative z-10">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Total Spent</span>
+                    <span class="p-1.5 bg-rose-50 text-rose-600 rounded-lg text-xs font-semibold">
+                        <i class="fa-solid fa-receipt"></i>
+                    </span>
+                </div>
+                <div class="text-2xl font-extrabold text-rose-600 mb-1 relative z-10" id="card-total-spent">
+                    ₹0.00
+                </div>
+                <div class="text-xs text-slate-500 font-medium relative z-10" id="card-total-count-label">
+                    0 expenses recorded
+                </div>
+            </div>
+
+            <!-- Remaining Balance Card -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+                <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-emerald-50 rounded-full group-hover:scale-110 transition-transform" id="remaining-bg-circle"></div>
+                <div class="flex items-center justify-between text-slate-500 mb-2 relative z-10">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Remaining Balance</span>
+                    <span class="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-xs font-semibold" id="remaining-badge-icon">
+                        <i class="fa-solid fa-scale-balanced"></i>
+                    </span>
+                </div>
+                <div class="text-2xl font-extrabold text-emerald-600 mb-1 relative z-10" id="card-remaining-balance">
+                    ₹0.00
+                </div>
+                <div class="flex items-center text-xs font-semibold relative z-10" id="card-remaining-status">
+                    <span class="text-emerald-700">Budget healthy</span>
+                </div>
+            </div>
+
+            <!-- Tracked Persons Summary Card -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+                <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-violet-50 rounded-full group-hover:scale-110 transition-transform"></div>
+                <div class="flex items-center justify-between text-slate-500 mb-2 relative z-10">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Tracked Persons</span>
+                    <button onclick="switchTab('persons-tab')" class="p-1.5 text-violet-600 hover:bg-violet-50 rounded-lg transition-colors" title="Manage Persons">
+                        <i class="fa-solid fa-user-plus text-sm"></i>
+                    </button>
+                </div>
+                <div class="text-2xl font-extrabold text-violet-700 mb-1 relative z-10" id="card-person-count">
+                    0
+                </div>
+                <div class="text-xs text-slate-500 font-medium relative z-10 flex items-center justify-between" id="card-person-names">
+                    <span>Configurable contributors</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Budget Utilization Progress Bar -->
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-6 flex flex-col gap-2">
+            <div class="flex items-center justify-between text-xs font-semibold text-slate-600">
+                <span class="flex items-center gap-1.5">
+                    <i class="fa-solid fa-chart-pie text-indigo-500"></i> Overall Budget Consumption
+                </span>
+                <span id="budget-progress-percent" class="font-bold text-slate-800">0% Used</span>
+            </div>
+            <div class="w-full bg-slate-100 rounded-full h-3 overflow-hidden p-0.5 border border-slate-200">
+                <div id="budget-progress-bar" class="h-full rounded-full transition-all duration-700 bg-indigo-500" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="border-b border-slate-200 mb-6">
+            <nav class="flex space-x-6" aria-label="Tabs">
+                <button onclick="switchTab('overview-tab')" id="tab-btn-overview-tab" class="tab-button active-tab flex items-center gap-2 py-3 px-1 border-b-2 font-semibold text-sm transition-all">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span>Overview & Analytics</span>
+                </button>
+                <button onclick="switchTab('individual-tab')" id="tab-btn-individual-tab" class="tab-button flex items-center gap-2 py-3 px-1 border-b-2 font-semibold text-sm text-slate-500 hover:text-slate-700 transition-all">
+                    <i class="fa-solid fa-id-badge"></i>
+                    <span>Individual Trackers</span>
+                </button>
+                <button onclick="switchTab('expenses-tab')" id="tab-btn-expenses-tab" class="tab-button flex items-center gap-2 py-3 px-1 border-b-2 font-semibold text-sm text-slate-500 hover:text-slate-700 transition-all">
+                    <i class="fa-solid fa-list-check"></i>
+                    <span>All Expenses Log</span>
+                </button>
+                <button onclick="switchTab('persons-tab')" id="tab-btn-persons-tab" class="tab-button flex items-center gap-2 py-3 px-1 border-b-2 font-semibold text-sm text-slate-500 hover:text-slate-700 transition-all">
+                    <i class="fa-solid fa-user-group"></i>
+                    <span>Persons Management</span>
+                </button>
+            </nav>
+        </div>
+
+        <!-- TAB CONTENT 1: OVERVIEW & ANALYTICS -->
+        <div id="overview-tab" class="tab-content space-y-6">
+            <!-- Charts Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Person Spending Doughnut Chart -->
+                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="font-bold text-slate-800 text-base">Spending by Person</h3>
+                            <p class="text-xs text-slate-500">Distribution of expenditures among individuals</p>
+                        </div>
+                        <span class="p-2 bg-indigo-50 text-indigo-600 rounded-lg text-xs"><i class="fa-solid fa-pie-chart"></i></span>
+                    </div>
+                    <div class="relative h-64 flex items-center justify-center">
+                        <canvas id="personChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Category Breakdown Bar Chart -->
+                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="font-bold text-slate-800 text-base">Spending by Category</h3>
+                            <p class="text-xs text-slate-500">Categories where funds are being utilized</p>
+                        </div>
+                        <span class="p-2 bg-emerald-50 text-emerald-600 rounded-lg text-xs"><i class="fa-solid fa-layer-group"></i></span>
+                    </div>
+                    <div class="relative h-64 flex items-center justify-center">
+                        <canvas id="categoryChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Individual Member Highlights Grid -->
+            <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-800">Person-wise Financial Breakdown</h2>
+                        <p class="text-xs text-slate-500">Click on any card to view their dedicated expense tracker</p>
+                    </div>
+                    <button onclick="switchTab('individual-tab')" class="text-xs font-semibold text-indigo-600 hover:text-indigo-800">
+                        View Detailed Trackers <i class="fa-solid fa-arrow-right ml-1"></i>
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" id="persons-summary-grid">
+                    <!-- Populated dynamically via JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB CONTENT 2: INDIVIDUAL PERSON TRACKERS -->
+        <div id="individual-tab" class="tab-content hidden space-y-6">
+            <!-- Individual Tracker Header & Selector -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-800">Individual Person Tracker</h2>
+                    <p class="text-xs text-slate-500">Select a person below to inspect their full expenses, categories, and contribution</p>
+                </div>
+                <!-- Person Selector Pill Buttons -->
+                <div class="flex items-center flex-wrap gap-2" id="individual-person-pills">
+                    <!-- Dynamic pill buttons injected here -->
+                </div>
+            </div>
+
+            <!-- Person Detail Hero Card -->
+            <div id="individual-person-hero" class="bg-gradient-to-br from-indigo-900 via-slate-900 to-indigo-950 text-white p-6 sm:p-8 rounded-3xl shadow-xl relative overflow-hidden">
+                <div class="absolute -right-8 -top-8 w-44 h-44 bg-indigo-500/10 rounded-full blur-2xl"></div>
+                <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div class="flex items-center gap-4">
+                        <div id="ind-avatar" class="w-16 h-16 rounded-2xl bg-indigo-600 flex items-center justify-center text-2xl font-black text-white shadow-lg shadow-indigo-500/30">
+                            RS
+                        </div>
+                        <div>
+                            <span class="text-xs font-bold uppercase tracking-wider text-indigo-300">Selected Person</span>
+                            <h2 class="text-2xl sm:text-3xl font-black" id="ind-person-name">Rahul Sharma</h2>
+                            <p class="text-xs text-slate-300 mt-0.5" id="ind-person-sub">3 expenses recorded</p>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 md:gap-6 bg-white/5 p-4 rounded-2xl border border-white/10 backdrop-blur-md">
+                        <div>
+                            <span class="text-[11px] font-semibold text-slate-300 block">Total Spent</span>
+                            <span class="text-xl sm:text-2xl font-black text-emerald-400" id="ind-total-spent">₹0.00</span>
+                        </div>
+                        <div>
+                            <span class="text-[11px] font-semibold text-slate-300 block">Share of Total</span>
+                            <span class="text-xl sm:text-2xl font-black text-indigo-300" id="ind-share-total">0%</span>
+                        </div>
+                        <div>
+                            <span class="text-[11px] font-semibold text-slate-300 block">Pool Impact</span>
+                            <span class="text-xl sm:text-2xl font-black text-amber-300" id="ind-share-pool">0%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Person's Specific Expenses Table -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-base" id="ind-table-title">Expenses by Rahul</h3>
+                        <p class="text-xs text-slate-500">History of all transactions paid by this person</p>
+                    </div>
+                    <button onclick="openAddExpenseForCurrentPerson()" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors">
+                        <i class="fa-solid fa-plus"></i> Add for this person
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase font-bold tracking-wider">
+                                <th class="py-3 px-5">Date</th>
+                                <th class="py-3 px-5">Expense Details</th>
+                                <th class="py-3 px-5">Category</th>
+                                <th class="py-3 px-5">Payment Mode</th>
+                                <th class="py-3 px-5 text-right">Amount (₹)</th>
+                                <th class="py-3 px-5 text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ind-expense-tbody" class="divide-y divide-slate-100 text-sm">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="ind-expense-empty" class="hidden p-12 text-center text-slate-400">
+                    <i class="fa-solid fa-wallet text-4xl mb-3 text-slate-300"></i>
+                    <p class="font-medium text-slate-600">No expenses recorded for this person yet</p>
+                    <p class="text-xs text-slate-400 mt-1">Click "Add for this person" to record the first transaction.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB CONTENT 3: ALL EXPENSES LOG -->
+        <div id="expenses-tab" class="tab-content hidden space-y-4">
+            <!-- Filter & Search Controls -->
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center flex-1 min-w-[240px] relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 text-slate-400 text-sm"></i>
+                    <input type="text" id="expense-search-input" placeholder="Search by title, description or notes..." 
+                        class="w-full pl-10 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
+                </div>
+
+                <div class="flex items-center flex-wrap gap-2">
+                    <!-- Filter By Person -->
+                    <select id="filter-person-select" onchange="loadAllExpenses()" class="text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="">All Persons</option>
+                    </select>
+
+                    <!-- Filter By Category -->
+                    <select id="filter-category-select" onchange="loadAllExpenses()" class="text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="">All Categories</option>
+                        <option value="Food & Dining">Food & Dining</option>
+                        <option value="Groceries">Groceries</option>
+                        <option value="Bills & Utilities">Bills & Utilities</option>
+                        <option value="Travel & Commute">Travel & Commute</option>
+                        <option value="Shopping">Shopping</option>
+                        <option value="Health & Medical">Health & Medical</option>
+                        <option value="Entertainment">Entertainment</option>
+                        <option value="Education">Education</option>
+                        <option value="Others">Others</option>
+                    </select>
+
+                    <!-- Reset Filters Button -->
+                    <button onclick="resetExpenseFilters()" class="text-xs font-semibold px-3 py-2 text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">
+                        <i class="fa-solid fa-rotate-left mr-1"></i> Reset
+                    </button>
+                </div>
+            </div>
+
+            <!-- All Expenses Table -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase font-bold tracking-wider">
+                                <th class="py-3 px-5">Date</th>
+                                <th class="py-3 px-5">Expense</th>
+                                <th class="py-3 px-5">Paid By</th>
+                                <th class="py-3 px-5">Category</th>
+                                <th class="py-3 px-5">Mode</th>
+                                <th class="py-3 px-5 text-right">Amount (₹)</th>
+                                <th class="py-3 px-5 text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="all-expenses-tbody" class="divide-y divide-slate-100 text-sm">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="all-expenses-empty" class="hidden p-12 text-center text-slate-400">
+                    <i class="fa-solid fa-receipt text-4xl mb-3 text-slate-300"></i>
+                    <p class="font-medium text-slate-600">No expenses found matching the criteria</p>
+                    <p class="text-xs text-slate-400 mt-1">Try adjusting your filters or click "+ Add Expense" above.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB CONTENT 4: PERSONS MANAGEMENT -->
+        <div id="persons-tab" class="tab-content hidden space-y-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-800">Manage Tracked Persons</h2>
+                    <p class="text-xs text-slate-500">Decide the number of persons, add new members, edit names, or customize badges</p>
+                </div>
+                <button onclick="openAddPersonModal()" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-all shadow-md shadow-indigo-600/25">
+                    <i class="fa-solid fa-user-plus"></i>
+                    <span>Add New Person</span>
+                </button>
+            </div>
+
+            <!-- Persons List Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" id="persons-manage-grid">
+                <!-- Injected via JS -->
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-4 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
+            <div>
+                RupeeTrack &copy; 2026 &bull; Multi-Person Shared & Individual Expense Manager (INR ₹)
+            </div>
+            <div class="flex items-center gap-4">
+                <span>Database: <strong class="text-slate-700">SQLite Active</strong></span>
+                <span>Currency: <strong class="text-slate-700">Indian Rupee (₹)</strong></span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ================== MODALS ================== -->
+
+    <!-- 1. CHANGE INITIAL BALANCE MODAL -->
+    <div id="modal-balance" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm hidden">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full mx-4 overflow-hidden border border-slate-100 animate-in">
+            <div class="p-6 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-amber-50 to-indigo-50">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold text-lg shadow-md shadow-amber-500/20">
+                        <i class="fa-solid fa-wallet"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-lg">Update Initial Balance</h3>
+                        <p class="text-xs text-slate-500">Configure your total available budget in INR (₹)</p>
+                    </div>
+                </div>
+                <button onclick="closeModal('modal-balance')" class="text-slate-400 hover:text-slate-600 p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <form onsubmit="handleUpdateBalance(event)" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">New Initial Balance (₹)</label>
+                    <div class="relative">
+                        <span class="absolute left-3.5 top-2.5 text-lg font-bold text-slate-400">₹</span>
+                        <input type="number" id="input-initial-balance" step="100" min="0" required
+                            class="w-full pl-9 pr-4 py-2.5 text-xl font-black text-slate-800 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:bg-white outline-none transition-all">
+                    </div>
+                    <p class="text-xs text-slate-500 mt-2">
+                        Updating this will immediately recalculate the remaining balance and pool utilization across the app.
+                    </p>
+                </div>
+
+                <!-- Quick Preset Increments -->
+                <div class="space-y-1.5 pt-1">
+                    <span class="text-[11px] font-bold text-slate-500 uppercase">Quick Shortcuts:</span>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" onclick="setBalanceInput(25000)" class="text-xs px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 font-semibold text-slate-700">₹25,000</button>
+                        <button type="button" onclick="setBalanceInput(50000)" class="text-xs px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 font-semibold text-slate-700">₹50,000</button>
+                        <button type="button" onclick="setBalanceInput(100000)" class="text-xs px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 font-semibold text-slate-700">₹1,00,000</button>
+                        <button type="button" onclick="setBalanceInput(200000)" class="text-xs px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 font-semibold text-slate-700">₹2,00,000</button>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                    <button type="button" onclick="closeModal('modal-balance')" class="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-5 py-2 text-sm font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-xl shadow-md shadow-amber-600/20 active:scale-95 transition-all">
+                        Save Balance
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 2. ADD / EDIT EXPENSE MODAL -->
+    <div id="modal-expense" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm hidden">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden border border-slate-100 animate-in">
+            <div class="p-6 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-indigo-50 to-violet-50">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-lg shadow-md shadow-indigo-600/20">
+                        <i class="fa-solid fa-receipt"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-lg" id="modal-expense-title">Record New Expense</h3>
+                        <p class="text-xs text-slate-500">Deducts from initial balance and attributes to person</p>
+                    </div>
+                </div>
+                <button onclick="closeModal('modal-expense')" class="text-slate-400 hover:text-slate-600 p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form onsubmit="handleSaveExpense(event)" class="p-6 space-y-4">
+                <input type="hidden" id="input-expense-id" value="">
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Expense Title / Description *</label>
+                    <input type="text" id="input-expense-title" required placeholder="e.g. Dinner at Gulati, Petrol, Rent, Groceries"
+                        class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all">
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Amount (₹) *</label>
+                        <div class="relative">
+                            <span class="absolute left-3 top-2.5 text-slate-500 font-bold">₹</span>
+                            <input type="number" id="input-expense-amount" step="0.5" min="1" required placeholder="0.00"
+                                class="w-full pl-8 pr-3.5 py-2.5 text-sm font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Paid By (Person) *</label>
+                        <select id="input-expense-person" required
+                            class="w-full px-3 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all">
+                            <!-- Populated with persons -->
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Category *</label>
+                        <select id="input-expense-category" required
+                            class="w-full px-3 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all">
+                            <option value="Food & Dining">🍔 Food & Dining</option>
+                            <option value="Groceries">🛒 Groceries</option>
+                            <option value="Bills & Utilities">⚡ Bills & Utilities</option>
+                            <option value="Travel & Commute">🚕 Travel & Commute</option>
+                            <option value="Shopping">🛍️ Shopping</option>
+                            <option value="Health & Medical">💊 Health & Medical</option>
+                            <option value="Entertainment">🎬 Entertainment</option>
+                            <option value="Education">📚 Education</option>
+                            <option value="Others">📦 Others</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Date *</label>
+                        <input type="date" id="input-expense-date" required
+                            class="w-full px-3 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Payment Mode</label>
+                        <select id="input-expense-mode"
+                            class="w-full px-3 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all">
+                            <option value="UPI">📱 UPI (GPay / PhonePe / Paytm)</option>
+                            <option value="Cash">💵 Cash</option>
+                            <option value="Credit Card">💳 Credit Card</option>
+                            <option value="Debit Card">💳 Debit Card</option>
+                            <option value="Net Banking">🏦 Net Banking</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Optional Notes</label>
+                        <input type="text" id="input-expense-notes" placeholder="Invoice #, split info, remarks"
+                            class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all">
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                    <button type="button" onclick="closeModal('modal-expense')" class="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-5 py-2 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md shadow-indigo-600/20 active:scale-95 transition-all">
+                        Save Expense
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 3. ADD / EDIT PERSON MODAL -->
+    <div id="modal-person" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm hidden">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full mx-4 overflow-hidden border border-slate-100 animate-in">
+            <div class="p-6 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-violet-50 to-indigo-50">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-violet-600 text-white flex items-center justify-center font-bold text-lg shadow-md shadow-violet-600/20">
+                        <i class="fa-solid fa-user-plus"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-lg" id="modal-person-title">Add New Person</h3>
+                        <p class="text-xs text-slate-500">Create an individual tracker profile</p>
+                    </div>
+                </div>
+                <button onclick="closeModal('modal-person')" class="text-slate-400 hover:text-slate-600 p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form onsubmit="handleSavePerson(event)" class="p-6 space-y-4">
+                <input type="hidden" id="input-person-id" value="">
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Person Name *</label>
+                    <input type="text" id="input-person-name" required placeholder="e.g. Rahul, Priya, Rohan, Ananya"
+                        class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-violet-500 focus:bg-white outline-none transition-all">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Badge Color Theme</label>
+                    <div class="flex items-center gap-3">
+                        <input type="color" id="input-person-color" value="#4F46E5" class="w-10 h-10 rounded-xl cursor-pointer border-0 p-0">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <button type="button" onclick="setPersonColor('#4F46E5')" class="w-6 h-6 rounded-full bg-[#4F46E5] ring-2 ring-offset-1 ring-transparent hover:ring-slate-400"></button>
+                            <button type="button" onclick="setPersonColor('#EC4899')" class="w-6 h-6 rounded-full bg-[#EC4899] ring-2 ring-offset-1 ring-transparent hover:ring-slate-400"></button>
+                            <button type="button" onclick="setPersonColor('#10B981')" class="w-6 h-6 rounded-full bg-[#10B981] ring-2 ring-offset-1 ring-transparent hover:ring-slate-400"></button>
+                            <button type="button" onclick="setPersonColor('#F59E0B')" class="w-6 h-6 rounded-full bg-[#F59E0B] ring-2 ring-offset-1 ring-transparent hover:ring-slate-400"></button>
+                            <button type="button" onclick="setPersonColor('#8B5CF6')" class="w-6 h-6 rounded-full bg-[#8B5CF6] ring-2 ring-offset-1 ring-transparent hover:ring-slate-400"></button>
+                            <button type="button" onclick="setPersonColor('#06B6D4')" class="w-6 h-6 rounded-full bg-[#06B6D4] ring-2 ring-offset-1 ring-transparent hover:ring-slate-400"></button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                    <button type="button" onclick="closeModal('modal-person')" class="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-5 py-2 text-sm font-bold text-white bg-violet-600 hover:bg-violet-700 rounded-xl shadow-md shadow-violet-600/20 active:scale-95 transition-all">
+                        Save Person
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Application JavaScript -->
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

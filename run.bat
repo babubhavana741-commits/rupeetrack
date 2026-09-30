@@ -1,0 +1,6 @@
+@echo off
+title RupeeTrack - Multi-Person Expense Tracker
+echo Starting RupeeTrack Expense Tracker...
+echo Opening http://127.0.0.1:5000 in your browser...
+python app.py
+pause
